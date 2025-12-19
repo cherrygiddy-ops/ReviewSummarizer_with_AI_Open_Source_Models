@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { InferenceClient } from '@huggingface/inference';
+import summarizeprompt from '../llm/prompts/summarize.reviews.txt';
 
 const openAIClient = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
@@ -35,12 +36,22 @@ export const llmClient = {
          text: response.output_text,
       };
    },
-   async summarize(text: string) {
-      const output = await inferenceClient.summarization({
-         model: 'facebook/bart-large-cnn',
-         inputs: text,
-         provider: 'hf-inference',
+   async summarizeReviews(reviews: string) {
+      const chatCompletion = await inferenceClient.chatCompletion({
+         model: 'meta-llama/Llama-3.1-8B-Instruct',
+         messages: [
+            {
+               role: 'system',
+               content: summarizeprompt,
+            },
+            {
+               role: 'user',
+               content: reviews,
+            },
+         ],
       });
-      return output.summary_text;
+
+      // Depending on the client, the response is usually in completion.choices[0].message.content
+      return chatCompletion.choices[0]?.message.content ||'';
    },
 };

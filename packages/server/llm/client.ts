@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
 import { InferenceClient } from '@huggingface/inference';
 import summarizeprompt from '../llm/prompts/summarize.reviews.txt';
+import { Ollama } from 'ollama';
 
-const openAIClient = new OpenAI({
-   apiKey: process.env.OPENAI_API_KEY,
-});
+const openAIClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const inferenceClient = new InferenceClient(process.env.HF_Token);
+const ollamaClient = new Ollama();
 type GenerateTextOptions = {
    model?: string;
    temperature?: number;
@@ -36,7 +36,7 @@ export const llmClient = {
          text: response.output_text,
       };
    },
-   async summarizeReviews(reviews: string) {
+   async summarizeReviewsWithHuggingFace(reviews: string) {
       const chatCompletion = await inferenceClient.chatCompletion({
          model: 'meta-llama/Llama-3.1-8B-Instruct',
          messages: [
@@ -52,6 +52,24 @@ export const llmClient = {
       });
 
       // Depending on the client, the response is usually in completion.choices[0].message.content
-      return chatCompletion.choices[0]?.message.content ||'';
+      return chatCompletion.choices[0]?.message.content || '';
+   },
+   async summarizeReviewsWithOllama(reviews: string) {
+      const response = await ollamaClient.chat({
+         model: 'tinyllama',
+         messages: [
+            {
+               role: 'system',
+               content: summarizeprompt,
+            },
+            {
+               role: 'user',
+               content: reviews,
+            },
+         ],
+      });
+
+      // Depending on the client, the response is usually in completion.choices[0].message.content
+      return response.message.content;
    },
 };
